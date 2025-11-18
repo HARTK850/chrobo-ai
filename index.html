@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chrobo AI - Gemini 3 Pro Preview</title>
+    <title>Chrobo AI</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,11 +11,11 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- JSZip for downloading extensions -->
+    <!-- JSZip & FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
-    <!-- Marked for Markdown rendering -->
+    <!-- Marked -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
@@ -23,381 +23,270 @@
 
         body {
             font-family: 'Heebo', sans-serif;
-            background-color: #020617; /* Slate 950 - Darker for Pro feel */
+            background-color: #0f172a;
             color: #e2e8f0;
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569; 
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        .code-font {
-            font-family: 'Fira Code', monospace;
-        }
-
+        /* Typing Animation */
         .typing-indicator span {
             display: inline-block;
-            width: 6px;
-            height: 6px;
-            background-color: #a855f7; /* Purple for 3.0 Pro */
+            width: 6px; height: 6px;
+            background-color: #60a5fa;
             border-radius: 50%;
             animation: typing 1.4s infinite both;
             margin: 0 2px;
         }
-        
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        
         @keyframes typing {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
 
-        /* Syntax Highlighting Simulation for Textarea */
+        /* Code Editor Style */
         textarea.code-editor {
-            background-color: #0d1117;
-            color: #e6edf3;
-            caret-color: #a855f7;
-            resize: none;
-            outline: none;
-            line-height: 1.6;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            resize: none; outline: none;
+            font-family: 'Fira Code', monospace;
+            line-height: 1.5;
             tab-size: 2;
         }
-
-        .pro-badge {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-        }
-
-        /* Loading Spinner for API Check */
+        
         .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #fff;
+            border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            border-top: 3px solid white;
+            width: 20px; height: 20px;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="h-16 bg-slate-900/80 backdrop-blur border-b border-slate-800 flex items-center justify-between px-6 shadow-lg z-10">
+    <header class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shadow-lg z-10">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-purple-500/30 shadow-lg">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
                 <i class="fa-brands fa-chrome text-white text-xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-white tracking-wide">
-                Chrobo <span class="pro-badge">AI 3 Preview</span>
-            </h1>
+            <!-- Clean Title Request -->
+            <h1 class="text-2xl font-bold text-white tracking-wide">Chrobo AI</h1>
         </div>
         
         <div class="flex items-center gap-4">
-            <!-- Model Indicator -->
-            <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                </span>
-                <span class="text-xs font-mono text-purple-300">gemini-3-pro-preview</span>
-            </div>
-
             <div id="api-status" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium">
                 <i class="fa-solid fa-check-circle"></i> מחובר
             </div>
-            <button onclick="openSettings()" class="p-2 text-slate-400 hover:text-white transition-colors" title="הגדרות API">
+            <button onclick="window.openSettings()" class="p-2 text-slate-400 hover:text-white transition-colors" title="הגדרות">
                 <i class="fa-solid fa-gear text-lg"></i>
             </button>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main Layout -->
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         
-        <!-- API Key Modal (Overlay) -->
-        <div id="api-modal" class="absolute inset-0 z-50 bg-slate-950/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-            <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-2xl max-w-md w-full mx-4 text-center relative overflow-hidden">
-                <!-- Decorative background glow -->
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-                
-                <div class="w-16 h-16 bg-purple-500/10 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl border border-purple-500/20">
-                    <i class="fa-solid fa-robot"></i>
+        <!-- Settings Modal -->
+        <div id="api-modal" class="hidden absolute inset-0 z-50 bg-slate-900/95 flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full mx-4 text-center">
+                <div class="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                    <i class="fa-solid fa-key"></i>
                 </div>
-                <h2 class="text-2xl font-bold mb-2 text-white">הגדרת מנוע AI</h2>
-                <p class="text-slate-400 mb-6 text-sm">הכנס את מפתח ה-API של גוגל כדי להפעיל את <strong class="text-purple-400">Gemini 3 Pro Preview</strong>.</p>
+                <h2 class="text-2xl font-bold mb-2 text-white">הגדרת מפתח API</h2>
+                <p class="text-slate-400 mb-6 text-sm">הכנס מפתח Google AI Studio עבור <b>gemini-3-pro-preview</b></p>
                 
                 <div class="relative mb-4">
-                    <i class="fa-solid fa-key absolute top-1/2 right-4 -translate-y-1/2 text-slate-500"></i>
-                    <input type="password" id="api-key-input" placeholder="הדבק מפתח API כאן..." 
-                        class="w-full bg-slate-950 border border-slate-700 text-white py-3 pr-12 pl-4 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all font-mono text-sm">
+                    <input type="password" id="api-key-input" placeholder="הדבק מפתח כאן..." 
+                        class="w-full bg-slate-900 border border-slate-600 text-white py-3 px-4 rounded-xl focus:border-blue-500 outline-none text-sm dir-ltr text-left">
                 </div>
                 
-                <!-- Validation Status Area -->
-                <div id="api-validation-status" class="min-h-[20px] mb-4 text-sm text-center"></div>
+                <div id="validation-msg" class="h-6 mb-2 text-sm"></div>
 
-                <button onclick="validateAndSaveApiKey()" id="save-api-btn" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2">
-                    <span>אמת ושמור מפתח</span>
+                <button onclick="window.validateAndSaveKey()" id="save-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    אמת ושמור
+                </button>
+                <button onclick="window.closeSettings()" class="mt-3 text-slate-500 text-sm hover:text-slate-300 underline">
+                    סגור (אם כבר קיים מפתח)
                 </button>
             </div>
         </div>
 
-        <!-- Left Panel: Chat -->
+        <!-- Chat Panel -->
         <div class="w-full md:w-1/3 flex flex-col border-l border-slate-800 bg-slate-900/50">
-            <!-- Chat Messages -->
             <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-                <!-- Welcome Message -->
                 <div class="flex flex-col items-start">
                     <div class="bg-slate-800 p-4 rounded-2xl rounded-tr-none border border-slate-700 max-w-[90%]">
-                        <div class="flex items-center gap-2 mb-2 text-purple-400 font-bold text-sm">
-                            <i class="fa-solid fa-microchip"></i> Chrobo AI (v3 Preview)
+                        <div class="flex items-center gap-2 mb-2 text-blue-400 font-bold text-sm">
+                            <i class="fa-solid fa-robot"></i> Chrobo AI
                         </div>
-                        <p class="text-slate-300 text-sm leading-relaxed">
-                            שלום! אני Chrobo AI, מופעל על ידי המנוע החדש <b>Gemini 3 Pro Preview</b>.
-                            <br><br>
-                            אני מתמחה בבניית תוספי כרום מורכבים. תאר לי את הרעיון שלך, ואני אצור את הקוד, המניפסט והעיצוב בזמן אמת.
+                        <p class="text-slate-300 text-sm">
+                            שלום! אני Chrobo AI. <br>
+                            אני מוכן לבנות עבורך תוספי כרום באמצעות המודל החדש.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Input Area -->
             <div class="p-4 bg-slate-900 border-t border-slate-800">
-                <div class="relative group">
-                    <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl opacity-20 group-hover:opacity-40 transition duration-200 blur"></div>
-                    <div class="relative flex">
-                        <textarea id="user-prompt" rows="2" placeholder="תאר את התוסף שברצונך לפתח..." 
-                            class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-3 pl-12 focus:border-purple-500 outline-none resize-none text-sm"></textarea>
-                        <button onclick="sendMessage()" id="send-btn" class="absolute left-2 bottom-2 p-2 text-purple-400 hover:text-white hover:bg-purple-600 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="fa-solid fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Panel: Code Editor -->
-        <div class="flex-1 flex flex-col bg-[#0d1117] relative">
-            <!-- Toolbar -->
-            <div class="h-12 bg-[#161b22] flex items-center justify-between px-4 border-b border-[#30363d]">
-                <div class="flex overflow-x-auto hide-scrollbar gap-1" id="file-tabs">
-                    <div class="text-xs text-slate-500 italic px-2 py-2">ממתין ליצירת קבצים...</div>
-                </div>
-                <div class="flex items-center gap-2 pl-2 border-r border-[#30363d]">
-                    <button onclick="downloadZip()" id="download-btn" class="flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] text-white text-xs px-3 py-1.5 rounded-md transition-colors opacity-50 cursor-not-allowed font-medium" disabled>
-                        <i class="fa-solid fa-file-zipper"></i> הורד ZIP
+                <div class="relative">
+                    <textarea id="user-prompt" rows="2" placeholder="תאר את התוסף..." 
+                        class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3 pl-12 focus:border-blue-500 outline-none resize-none text-sm"></textarea>
+                    <button onclick="window.sendMessage()" id="send-btn" class="absolute left-2 bottom-2 p-2 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors">
+                        <i class="fa-solid fa-paper-plane"></i>
                     </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Editor Area -->
+        <!-- Code Editor Panel -->
+        <div class="flex-1 flex flex-col bg-[#1e1e1e]">
+            <div class="h-12 bg-[#252526] flex items-center justify-between px-4 border-b border-[#3e3e42]">
+                <div class="flex overflow-x-auto hide-scrollbar gap-1" id="file-tabs">
+                    <span class="text-xs text-gray-500 p-2 italic">אין קבצים</span>
+                </div>
+                <button onclick="window.downloadZip()" id="dl-btn" class="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded opacity-50 cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-file-zipper"></i> הורד ZIP
+                </button>
+            </div>
+
             <div class="flex-1 relative">
-                <textarea id="code-display" class="code-editor w-full h-full p-6 font-mono text-sm" spellcheck="false" readonly></textarea>
-                
-                <!-- Empty State -->
+                <textarea id="code-display" class="code-editor w-full h-full p-6" spellcheck="false" readonly></textarea>
                 <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 pointer-events-none">
-                    <div class="w-20 h-20 rounded-full bg-slate-800/50 flex items-center justify-center mb-4 border border-slate-700">
-                        <i class="fa-solid fa-code text-4xl opacity-30 text-purple-500"></i>
-                    </div>
-                    <p class="text-sm opacity-50 font-medium">האזור הזה יתמלא בקוד ש-Chrobo AI ייצור</p>
+                    <i class="fa-solid fa-code text-4xl mb-4 opacity-20"></i>
+                    <p class="text-sm opacity-50">הקוד יופיע כאן</p>
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- Scripts -->
     <script>
+        // Global State
+        const GEMINI_MODEL = 'gemini-3-pro-preview';
         let apiKey = localStorage.getItem('chrobo_api_key') || '';
-        let currentFiles = {}; 
+        let currentFiles = {};
         let activeFile = null;
         let chatHistory = [];
-        // --- CRITICAL FIX: USING THE PREVIEW MODEL NAME FROM USER'S DOCUMENTATION ---
-        const GEMINI_MODEL = 'gemini-3-pro-preview';
 
-        // --- Initialization ---
-        window.addEventListener('load', () => {
-            if (apiKey) {
-                // If key exists, assume connection unless proven otherwise on first use
-                hideApiModal();
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!apiKey) {
+                window.openSettings();
+            } else {
+                document.getElementById('api-status').classList.replace('hidden', 'flex');
             }
         });
 
-        // --- API Key Management and Validation ---
+        // --- Global Functions (attached to window to prevent ReferenceError) ---
 
-        function showApiModal(message = '', isError = false) {
+        window.openSettings = function() {
             const modal = document.getElementById('api-modal');
-            const statusDiv = document.getElementById('api-validation-status');
             const input = document.getElementById('api-key-input');
-            
+            input.value = apiKey;
             modal.classList.remove('hidden');
-            input.value = localStorage.getItem('chrobo_api_key') || ''; // Load saved key if exists
+            document.getElementById('validation-msg').innerHTML = '';
+        };
 
-            statusDiv.innerHTML = `<span class="${isError ? 'text-red-400' : 'text-slate-400'}">${message}</span>`;
-            document.getElementById('save-api-btn').disabled = false;
-            document.getElementById('save-api-btn').innerHTML = '<span>אמת ושמור מפתח</span>';
-        }
-
-        function hideApiModal() {
+        window.closeSettings = function() {
             document.getElementById('api-modal').classList.add('hidden');
-            document.getElementById('api-status').classList.remove('hidden');
-            document.getElementById('api-status').classList.add('flex');
-        }
+        };
 
-        async function validateApiKey(key) {
-            // Note: The /v1beta/models API path remains correct for preview models
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
-            const systemPrompt = "Respond with a single word 'OK'.";
-
-            const payload = {
-                contents: [{ parts: [{ text: "Simple connectivity check." }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] }
-            };
-
-            const maxRetries = 3;
-            let delay = 1000;
-            
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && !data.error) {
-                        // Success check: HTTP 200/202 and no error field
-                        return { success: true, message: "המפתח תקין ומאושר לשימוש ב-3 Pro Preview!" };
-                    } 
-                    
-                    // Handle specific error messages
-                    const errorMessage = data.error ? data.error.message : 'שגיאה לא ידועה';
-                    
-                    if (errorMessage.includes('API key not valid') || response.status === 400 || response.status === 401) {
-                        return { success: false, message: "המפתח שהוזן אינו תקין. נא לבדוק שוב." };
-                    }
-                    if (errorMessage.includes('Permission denied') || response.status === 403) {
-                        return { success: false, message: `גישה נדחתה. ייתכן שהמפתח אינו מורשה לגשת למודל ${GEMINI_MODEL}.` };
-                    }
-
-                    // Retry for rate limiting or transient errors
-                    if (i < maxRetries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    }
-
-                } catch (e) {
-                    // Network errors or JSON parsing failures
-                    if (i === maxRetries - 1) {
-                        return { success: false, message: `שגיאת רשת. לא ניתן היה ליצור קשר עם שרתי גוגל: ${e.message}` };
-                    }
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                }
-            }
-            return { success: false, message: "בדיקת המפתח נכשלה לאחר מספר ניסיונות. נא ודא שהמפתח תקף." };
-        }
-
-        async function validateAndSaveApiKey() {
+        window.validateAndSaveKey = async function() {
             const input = document.getElementById('api-key-input');
+            const btn = document.getElementById('save-btn');
+            const msgDiv = document.getElementById('validation-msg');
             const key = input.value.trim();
-            const btn = document.getElementById('save-api-btn');
-            const statusDiv = document.getElementById('api-validation-status');
 
             if (!key) {
-                showApiModal('אנא הכנס מפתח API.', true);
+                msgDiv.innerHTML = '<span class="text-red-400">נא להזין מפתח</span>';
                 return;
             }
 
-            // Show loading state
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner border-t-purple-300"></div> <span>מאמת מפתח...</span>';
-            statusDiv.innerHTML = '';
+            btn.innerHTML = '<div class="spinner"></div>';
+            msgDiv.innerHTML = '';
 
-            const validationResult = await validateApiKey(key);
+            try {
+                // Test connection to gemini-3-pro-preview
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: "Test" }] }]
+                    })
+                });
 
-            if (validationResult.success) {
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error?.message || 'Error');
+                }
+
+                // Success
                 apiKey = key;
                 localStorage.setItem('chrobo_api_key', apiKey);
-                statusDiv.innerHTML = `<span class="text-green-400">${validationResult.message}</span>`;
-                setTimeout(hideApiModal, 1500); // Hide after a short delay
-            } else {
-                // Key invalid, do not save
-                statusDiv.innerHTML = `<span class="text-red-400">${validationResult.message}</span>`;
-                btn.disabled = false;
-                btn.innerHTML = '<span>אמת ושמור מפתח</span>';
-            }
-        }
+                msgDiv.innerHTML = '<span class="text-green-400">המפתח תקין!</span>';
+                
+                document.getElementById('api-status').classList.replace('hidden', 'flex');
+                
+                setTimeout(() => {
+                    window.closeSettings();
+                    btn.disabled = false;
+                    btn.innerHTML = 'אמת ושמור';
+                }, 1000);
 
-        // --- Core Logic: Gemini 3 Pro Preview API Interaction ---
-        async function sendMessage() {
-            const inputEl = document.getElementById('user-prompt');
-            const message = inputEl.value.trim();
-            if (!message || !apiKey) {
-                showApiModal('חובה להזין מפתח API כדי להתחיל עבודה.', true);
+            } catch (e) {
+                console.error(e);
+                msgDiv.innerHTML = `<span class="text-red-400 text-xs">שגיאה: המפתח לא תקין או אין גישה למודל.</span>`;
+                btn.disabled = false;
+                btn.innerHTML = 'אמת ושמור';
+            }
+        };
+
+        window.sendMessage = async function() {
+            const input = document.getElementById('user-prompt');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            if (!apiKey) {
+                window.openSettings();
                 return;
             }
 
             // UI Updates
-            inputEl.value = '';
-            addMessageToChat('user', message);
-            showTypingIndicator();
-            document.getElementById('send-btn').disabled = true;
+            input.value = '';
+            addChatBubble('user', text);
+            const loadingId = showLoading();
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
 
-            // The System Prompt - Strict instructions for the model
+            // System Prompt
             const systemPrompt = `
-            You are "Chrobo AI", an advanced AI specialized in building Google Chrome Extensions.
-            You are running on the "Gemini 3 Pro Preview" model (${GEMINI_MODEL}).
-            
-            YOUR TASK:
-            Generate complete, functional code for Chrome Extensions based on the user's request.
-            
-            RESPONSE FORMAT (STRICT JSON ONLY):
-            You must return a valid JSON object. Do not include markdown formatting (like \`\`\`json).
-            
+            You are Chrobo AI, a Chrome Extension expert.
+            Model: ${GEMINI_MODEL}.
+            Output: STRICT JSON ONLY. No markdown code blocks.
+            Structure:
             {
-                "message": "Hebrew text explaining what you did, referring to yourself as Chrobo AI. Always mention that you are Chrobo AI.",
+                "message": "Hebrew explanation of what you did.",
                 "files": [
-                    {
-                        "name": "manifest.json",
-                        "content": "{... manifest v3 content ...}"
-                    }
-                    // ... other files
+                    { "name": "manifest.json", "content": "..." },
+                    { "name": "popup.html", "content": "..." }
                 ]
             }
-
-            GUIDELINES:
-            1. Manifest MUST be Version 3 (manifest_version: 3).
-            2. Always include at least 'manifest.json'.
-            3. Use valid HTML/CSS/JS.
-            4. Do NOT use alert(). Use console.log or DOM manipulation.
+            Manifest Version must be 3.
             `;
 
-            // Context history
             const contents = [
                 { role: "user", parts: [{ text: systemPrompt }] },
                 ...chatHistory,
-                { role: "user", parts: [{ text: message }] }
+                { role: "user", parts: [{ text: text }] }
             ];
 
             try {
@@ -406,63 +295,57 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: contents,
-                        generationConfig: {
-                            temperature: 0.7,
-                            responseMimeType: "application/json" // Force JSON mode
-                        }
+                        generationConfig: { responseMimeType: "application/json" }
                     })
                 });
 
                 const data = await response.json();
                 
-                if (data.error) {
-                    throw new Error(data.error.message);
-                }
+                if (data.error) throw new Error(data.error.message);
 
                 const rawText = data.candidates[0].content.parts[0].text;
-                let parsedResponse;
-                try {
-                    parsedResponse = JSON.parse(rawText);
-                } catch(e) {
-                    console.error("JSON Parse Error:", e);
-                    throw new Error("Chrobo AI החזיר תוכן לא תקין (JSON).");
-                }
+                const parsed = JSON.parse(rawText);
 
                 // Update History
-                chatHistory.push({ role: "user", parts: [{ text: message }] });
+                chatHistory.push({ role: "user", parts: [{ text }] });
                 chatHistory.push({ role: "model", parts: [{ text: rawText }] });
 
                 // Update UI
-                removeTypingIndicator();
-                addMessageToChat('model', parsedResponse.message);
-
-                if (parsedResponse.files && parsedResponse.files.length > 0) {
-                    updateFileManager(parsedResponse.files);
+                removeLoading(loadingId);
+                addChatBubble('model', parsed.message);
+                
+                if (parsed.files && parsed.files.length) {
+                    updateFiles(parsed.files);
                 }
 
-            } catch (error) {
-                console.error(error);
-                removeTypingIndicator();
-                addMessageToChat('model', `שגיאה חמורה בהפעלת ${GEMINI_MODEL}: ${error.message}. אנא בדוק את המפתח שוב.`);
+            } catch (e) {
+                removeLoading(loadingId);
+                addChatBubble('model', `שגיאה: ${e.message}`);
             } finally {
-                document.getElementById('send-btn').disabled = false;
+                sendBtn.disabled = false;
             }
-        }
+        };
 
-        // --- UI Helper Functions (Same as before) ---
+        window.downloadZip = function() {
+            const zip = new JSZip();
+            Object.keys(currentFiles).forEach(name => zip.file(name, currentFiles[name]));
+            zip.generateAsync({type:"blob"}).then(content => saveAs(content, "extension.zip"));
+        };
 
-        function addMessageToChat(role, text) {
+        // --- Internal Helper Functions ---
+
+        function addChatBubble(role, text) {
             const container = document.getElementById('chat-container');
             const div = document.createElement('div');
             div.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
             
             const bubble = document.createElement('div');
             bubble.className = role === 'user' 
-                ? 'bg-indigo-600 text-white p-3 rounded-2xl rounded-tl-none max-w-[90%] text-sm shadow-lg shadow-indigo-500/20'
-                : 'bg-slate-800 border border-slate-700 text-slate-200 p-4 rounded-2xl rounded-tr-none max-w-[90%] text-sm shadow-sm';
+                ? 'bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-[90%] text-sm'
+                : 'bg-slate-800 border border-slate-700 text-slate-200 p-3 rounded-2xl rounded-tr-none max-w-[90%] text-sm';
             
             if (role === 'model') {
-                bubble.innerHTML = `<div class="mb-2 text-purple-400 font-bold text-xs flex items-center gap-1 border-b border-slate-700 pb-1"><i class="fa-solid fa-robot"></i> Chrobo AI</div>` + marked.parse(text);
+                bubble.innerHTML = marked.parse(text);
             } else {
                 bubble.textContent = text;
             }
@@ -472,109 +355,74 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        function showTypingIndicator() {
+        function showLoading() {
+            const id = 'loading-' + Date.now();
             const container = document.getElementById('chat-container');
             const div = document.createElement('div');
-            div.id = 'typing-indicator';
+            div.id = id;
             div.className = 'flex flex-col items-start';
             div.innerHTML = `
                 <div class="bg-slate-800 p-3 rounded-2xl rounded-tr-none border border-slate-700">
-                    <div class="typing-indicator flex gap-1">
-                        <span></span><span></span><span></span>
-                    </div>
-                </div>
-            `;
+                    <div class="typing-indicator flex gap-1"><span></span><span></span><span></span></div>
+                </div>`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+            return id;
         }
 
-        function removeTypingIndicator() {
-            const el = document.getElementById('typing-indicator');
+        function removeLoading(id) {
+            const el = document.getElementById(id);
             if (el) el.remove();
         }
 
-        // --- File Manager Logic ---
-
-        function updateFileManager(newFiles) {
-            newFiles.forEach(file => {
-                currentFiles[file.name] = file.content;
-            });
-
+        function updateFiles(newFiles) {
+            newFiles.forEach(f => currentFiles[f.name] = f.content);
             renderTabs();
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('dl-btn').disabled = false;
+            document.getElementById('dl-btn').classList.remove('opacity-50', 'cursor-not-allowed');
             
-            if (Object.keys(currentFiles).length > 0) {
-                const dlBtn = document.getElementById('download-btn');
-                dlBtn.disabled = false;
-                dlBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                
-                document.getElementById('empty-state').style.display = 'none';
-                
-                // Auto select first file
-                if (!activeFile || newFiles.some(f => f.name === activeFile)) {
-                    selectFile(newFiles[0].name);
-                }
+            if (!activeFile || newFiles.some(f => f.name === activeFile)) {
+                selectFile(newFiles[0].name);
             }
         }
 
         function renderTabs() {
-            const tabsContainer = document.getElementById('file-tabs');
-            tabsContainer.innerHTML = '';
-
-            Object.keys(currentFiles).forEach(filename => {
+            const container = document.getElementById('file-tabs');
+            container.innerHTML = '';
+            
+            Object.keys(currentFiles).forEach(name => {
                 const btn = document.createElement('button');
-                const isActive = activeFile === filename;
+                const isActive = activeFile === name;
+                btn.className = `px-3 py-2 text-xs border-t-2 flex items-center gap-2 transition-colors
+                    ${isActive ? 'bg-[#1e1e1e] text-white border-blue-500' : 'bg-[#2d2d2d] text-gray-400 border-transparent hover:bg-[#252526]'}`;
                 
-                let iconClass = 'fa-file text-slate-400';
-                if (filename.endsWith('.json')) iconClass = 'fa-solid fa-gear text-yellow-500';
-                if (filename.endsWith('.html')) iconClass = 'fa-brands fa-html5 text-orange-500';
-                if (filename.endsWith('.js')) iconClass = 'fa-brands fa-js text-yellow-300';
-                if (filename.endsWith('.css')) iconClass = 'fa-brands fa-css3 text-blue-400';
-                if (filename.endsWith('.png') || filename.endsWith('.jpg')) iconClass = 'fa-solid fa-image text-purple-400';
+                let icon = 'fa-file';
+                if (name.endsWith('html')) icon = 'fa-html5 text-orange-500';
+                if (name.endsWith('js')) icon = 'fa-js text-yellow-400';
+                if (name.endsWith('css')) icon = 'fa-css3 text-blue-400';
+                if (name.endsWith('json')) icon = 'fa-gear text-gray-400';
 
-                btn.className = `
-                    flex items-center gap-2 px-3 py-2 text-xs border-t-2 transition-all whitespace-nowrap
-                    ${isActive 
-                        ? 'bg-[#0d1117] text-white border-purple-500 font-medium' 
-                        : 'bg-[#161b22] text-slate-400 border-transparent hover:bg-[#21262d] hover:text-slate-200'}
-                `;
-                
-                btn.innerHTML = `<i class="${iconClass}"></i> ${filename}`;
-                btn.onclick = () => selectFile(filename);
-                
-                tabsContainer.appendChild(btn);
+                btn.innerHTML = `<i class="fa-brands ${icon}"></i> ${name}`;
+                btn.onclick = () => selectFile(name);
+                container.appendChild(btn);
             });
         }
 
-        function selectFile(filename) {
-            activeFile = filename;
+        function selectFile(name) {
+            activeFile = name;
             renderTabs();
             const editor = document.getElementById('code-display');
-            editor.value = currentFiles[filename];
+            editor.value = currentFiles[name];
             editor.readOnly = false;
-            
-            // Real-time update
-            editor.oninput = (e) => {
-                currentFiles[activeFile] = e.target.value;
-            };
+            editor.oninput = (e) => currentFiles[name] = e.target.value;
         }
 
-        // --- Download Logic ---
-        function downloadZip() {
-            const zip = new JSZip();
-            Object.keys(currentFiles).forEach(filename => {
-                zip.file(filename, currentFiles[filename]);
-            });
-
-            zip.generateAsync({type:"blob"}).then(function(content) {
-                saveAs(content, "chrobo-extension-v3-preview.zip");
-            });
-        }
-
-        // --- Event Listeners ---
-        document.getElementById('user-prompt').addEventListener('keydown', function(e) {
+        // Allow Enter to send
+        document.getElementById('user-prompt').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                window.sendMessage();
             }
         });
 
