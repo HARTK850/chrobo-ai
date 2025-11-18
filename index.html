@@ -3,183 +3,470 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chrobo Ai - צור תוספי כרום בעזרת AI</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Added JSZip library from CDN to fix ZIP download functionality -->
+    <title>Chrobo AI - בונה תוספי כרום</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- JSZip for downloading extensions -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: #94a3b8;
+            border-radius: 50%;
+            animation: typing 1.4s infinite both;
+            margin: 0 2px;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Syntax Highlighting Simulation for Textarea */
+        .editor-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+        
+        textarea.code-editor {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            caret-color: white;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            tab-size: 2;
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <h1 style="text-align: center;">Chrobo Ai</h1>
-                <p style="text-align: center;">צור תוספי Chrome מותאמים אישית בעזרת AI</p>
-            </div>
-        </header>
+<body class="h-screen flex flex-col overflow-hidden">
 
-        <main>
-            <div class="action-buttons">
-                <button id="historyBtn" class="round-btn medium" title="היסטוריית צ'אטים">
-                    📚
-                </button>
-                <button id="apiKeyBtn" class="round-btn medium" title="מפתח API">
-                    🔑
-                </button>
-                <button id="settingsBtn" class="round-btn medium" title="הגדרות">
-                    ⚙️
-                </button>
+    <!-- Header -->
+    <header class="h-16 bg-slate-900 border-b border-slate-700 flex items-center justify-between px-6 shadow-lg z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center shadow-cyan-500/50 shadow-lg">
+                <i class="fa-brands fa-chrome text-white text-xl"></i>
             </div>
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-wide">Chrobo AI</h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div id="api-status" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium">
+                <i class="fa-solid fa-link"></i> מחובר
+            </div>
+            <button onclick="openSettings()" class="p-2 text-slate-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-gear text-lg"></i>
+            </button>
+        </div>
+    </header>
 
-            <section class="creation-area">
-                <h2>תאר את הרעיון שלך</h2>
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- API Key Modal (Overlay) -->
+        <div id="api-modal" class="absolute inset-0 z-50 bg-slate-900/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full mx-4 text-center">
+                <div class="w-16 h-16 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-2 text-white">הגדרת מפתח API</h2>
+                <p class="text-slate-400 mb-6 text-sm">כדי ש-Chrobo AI יוכל לעבוד, נא להזין את המפתח מ-Google AI Studio.</p>
                 
-                <div class="input-group">
-                    <label for="ideaInput">מה התוסף שלך יעשה?</label>
-                    <textarea id="ideaInput" placeholder="למשל: תוסף שמסמן מילים קשות בטקסט ומציג הסבר עליהן, או תוסף שמשנה את צבע הרקע של כל האתרים לצבע שאני אוהב..."></textarea>
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-lock absolute top-1/2 right-4 -translate-y-1/2 text-slate-500"></i>
+                    <input type="password" id="api-key-input" placeholder="הדבק את המפתח כאן..." 
+                        class="w-full bg-slate-900 border border-slate-700 text-white py-3 pr-12 pl-4 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                 </div>
                 
-                <button id="generateBtn" class="generate-btn">
-                    <span class="btn-text">צור תוסף</span>
-                    <span class="btn-loader" style="display: none;">
-                        <div class="spinner"></div>
-                    </span>
+                <button onclick="saveApiKey()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02]">
+                    התחל לעבוד
                 </button>
-            </section>
+                <p class="mt-4 text-xs text-slate-500">המפתח נשמר בדפדפן שלך בלבד.</p>
+            </div>
+        </div>
 
-            <section class="ai-response-section" id="aiResponseSection" style="display: none;">
-                <div class="ai-response-header">
-                    <h3>🤖 תשובת ה-AI</h3>
-                </div>
-                <div class="ai-response-content" id="aiResponseContent"></div>
-            </section>
-
-            <section class="code-editor-section" id="codeEditorSection" style="display: none;">
-                <div class="editor-header">
-                    <h3>📝 עורך הקוד</h3>
-                    <div class="editor-actions">
-                        <button id="downloadBtn" class="action-btn">💾 הורד ZIP</button>
+        <!-- Left Panel: Chat -->
+        <div class="w-full md:w-1/3 flex flex-col border-l border-slate-700 bg-slate-800/50">
+            <!-- Chat Messages -->
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+                <!-- Welcome Message -->
+                <div class="flex flex-col items-start">
+                    <div class="bg-slate-700/50 p-4 rounded-2xl rounded-tr-none border border-slate-600/50 max-w-[90%]">
+                        <div class="flex items-center gap-2 mb-2 text-blue-400 font-bold text-sm">
+                            <i class="fa-brands fa-chrome"></i> Chrobo AI
+                        </div>
+                        <p class="text-slate-200 text-sm leading-relaxed">
+                            שלום! אני Chrobo AI. אני כאן כדי לבנות עבורך תוספי כרום מלאים.
+                            <br><br>
+                            תאר לי מה התוסף שתרצה שאצור, ואני אכתוב את הקוד, אצור את הקבצים ואאפשר לך להוריד אותם כ-ZIP.
+                        </p>
                     </div>
                 </div>
-                <div class="file-tabs" id="fileTabs"></div>
-                <div class="code-editor" id="codeEditor">
-                    <div id="codeContent" class="code-content"></div>
-                </div>
-                <div id="saveNotification" class="save-notification" style="display: none;">
-                    ✅ השינויים נשמרו בהצלחה! (Ctrl+S)
-                </div>
-            </section>
-
-            <section class="continue-chat-section" id="continueChatSection" style="display: none;">
-                <h4>💬 המשך שיחה עם ה-AI</h4>
-                <!-- Added selected text context display area -->
-                <div id="selectedTextContext" class="selected-text-context" style="display: none;">
-                    <div class="context-header">📝 טקסט נבחר:</div>
-                    <div class="context-content" id="selectedTextDisplay"></div>
-                </div>
-                <textarea id="continueInput" class="continue-input" placeholder="מה תרצה לשנות או להוסיף לתוסף? למשל: 'הוסף כפתור לשינוי צבע', 'תקן את הבאג בפונקציה', 'הוסף אפשרות שמירה'..."></textarea>
-                <button id="continueBtn" class="generate-btn">
-                    <span class="continue-text">שלח</span>
-                    <span class="continue-loader" style="display: none;">
-                        <div class="spinner"></div>
-                    </span>
-                </button>
-            </section>
-        </main>
-    </div>
-
-    <div id="historyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>📚 היסטוריית צ'אטים</h3>
-                <button class="close-btn" data-modal="historyModal">&times;</button>
             </div>
-            <div class="modal-body scrollable">
-                <div class="chat-filters">
-                    <button id="allChatsBtn" class="filter-btn active">כל הצ'אטים</button>
-                    <button id="favoriteChatsBtn" class="filter-btn">מועדפים</button>
-                </div>
-                <div id="chatsList" class="chats-list">
-                    <div class="empty-state">אין צ'אטים שמורים עדיין</div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-slate-800 border-t border-slate-700">
+                <div class="relative">
+                    <textarea id="user-prompt" rows="3" placeholder="תאר את התוסף שברצונך ליצור..." 
+                        class="w-full bg-slate-900/80 border border-slate-600 text-white rounded-xl p-3 pl-12 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none resize-none text-sm"></textarea>
+                    <button onclick="sendMessage()" id="send-btn" class="absolute left-2 bottom-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="apiKeyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🔑 מפתח Gemini API</h3>
-                <button class="close-btn" data-modal="apiKeyModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="input-group">
-                    <label for="apiKeyInput">מפתח API</label>
-                    <input type="password" id="apiKeyInput" placeholder="הכנס את מפתח ה-API שלך">
-                    <div id="apiStatus" class="api-status"></div>
-                    <small>המפתח נשמר מקומית בדפדפן שלך בלבד</small>
+        <!-- Right Panel: Code Editor -->
+        <div class="flex-1 flex flex-col bg-[#1e1e1e] relative">
+            <!-- Toolbar -->
+            <div class="h-12 bg-[#252526] flex items-center justify-between px-4 border-b border-[#3e3e42]">
+                <div class="flex overflow-x-auto hide-scrollbar gap-1" id="file-tabs">
+                    <!-- Tabs will be injected here -->
+                    <div class="text-xs text-slate-500 italic px-2 py-2">אין קבצים עדיין...</div>
                 </div>
-                <button id="saveApiKeyBtn" class="save-btn">שמור מפתח</button>
+                <div class="flex items-center gap-2 pl-2 border-r border-[#3e3e42]">
+                    <button onclick="downloadZip()" id="download-btn" class="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-1.5 rounded transition-colors opacity-50 cursor-not-allowed" disabled>
+                        <i class="fa-solid fa-download"></i> הורד ZIP
+                    </button>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div id="settingsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚙️ הגדרות</h3>
-                <button class="close-btn" data-modal="settingsModal">&times;</button>
-            </div>
-            <div class="modal-body scrollable">
-                <div class="setting-group">
-                    <label for="modelSelect">מודל AI</label>
-                    <select id="modelSelect">
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro - מתקדם</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash - מומלץ</option>
-                        <option value="gemini-2.5-flash-exp">Gemini 2.5 Flash Experimental - ניסיוני</option>
-                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental - ניסיוני</option>
-                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B - קל</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash - יציב</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro - מקצועי</option>
-                    </select>
+            <!-- Editor Area -->
+            <div class="flex-1 relative group">
+                <textarea id="code-display" class="code-editor w-full h-full p-4 font-mono text-sm" spellcheck="false" readonly></textarea>
+                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 pointer-events-none">
+                    <i class="fa-solid fa-code text-4xl mb-3 opacity-20"></i>
+                    <p class="text-sm opacity-50">הקוד של התוסף יופיע כאן</p>
                 </div>
-                <div class="setting-group">
-                    <label for="temperatureSlider">טמפרטורה (יצירתיות)</label>
-                    <input type="range" id="temperatureSlider" min="0" max="2" step="0.1" value="0.7">
-                    <span id="temperatureValue">0.7</span>
-                </div>
-                <div class="setting-group">
-                    <label for="maxTokensInput">מקסימום טוקנים</label>
-                    <input type="number" id="maxTokensInput" min="100" max="8192" value="4096">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="unlimitedTokens">
-                        השבת הגבלת טוקנים
-                    </label>
-                </div>
-                <div class="setting-group">
-                    <label for="topPSlider">Top-P (דיוק)</label>
-                    <input type="range" id="topPSlider" min="0" max="1" step="0.05" value="0.95">
-                    <span id="topPValue">0.95</span>
-                </div>
-                <div class="setting-group">
-                    <label for="topKSlider">Top-K (מגוון)</label>
-                    <input type="range" id="topKSlider" min="1" max="100" step="1" value="40">
-                    <span id="topKValue">40</span>
-                </div>
-                <div class="setting-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="autoSaveChats" checked>
-                        שמור צ'אטים אוטומטית
-                    </label>
-                </div>
-                <button id="saveSettingsBtn" class="save-btn">שמור הגדרות</button>
             </div>
         </div>
+
     </div>
 
-    <div id="textSelectionPopup" class="text-selection-popup" style="display: none;">
-        <button id="askAboutSelectionBtn" class="selection-btn">❓ שאל על הטקסט הזה</button>
-    </div>
+    <!-- Scripts -->
+    <script>
+        let apiKey = localStorage.getItem('chrobo_api_key') || '';
+        let currentFiles = {}; // Stores { 'filename': 'content' }
+        let activeFile = null;
+        let chatHistory = [];
 
-    <script src="script.js"></script>
+        // --- Initialization ---
+        window.addEventListener('load', () => {
+            if (apiKey) {
+                document.getElementById('api-modal').classList.add('hidden');
+                document.getElementById('api-status').classList.remove('hidden');
+                document.getElementById('api-status').classList.add('flex');
+            }
+        });
+
+        // --- API Key Management ---
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input').value.trim();
+            if (input) {
+                apiKey = input;
+                localStorage.setItem('chrobo_api_key', apiKey);
+                document.getElementById('api-modal').classList.add('hidden');
+                document.getElementById('api-status').classList.remove('hidden');
+                document.getElementById('api-status').classList.add('flex');
+            }
+        }
+
+        function openSettings() {
+            document.getElementById('api-modal').classList.remove('hidden');
+            document.getElementById('api-key-input').value = apiKey;
+        }
+
+        // --- Core Logic: Gemini API Interaction ---
+        async function sendMessage() {
+            const inputEl = document.getElementById('user-prompt');
+            const message = inputEl.value.trim();
+            if (!message || !apiKey) return;
+
+            // UI Updates
+            inputEl.value = '';
+            addMessageToChat('user', message);
+            showTypingIndicator();
+            document.getElementById('send-btn').disabled = true;
+
+            // Construct the System Prompt
+            // We instruct Gemini to return PURE JSON to make parsing reliable
+            const systemPrompt = `
+            You are "Chrobo AI".
+            Your goal is to generate Google Chrome Extensions based on user requests.
+            
+            IMPORTANT RESPONSE FORMAT:
+            You must respond with a valid JSON object ONLY. No markdown formatting around the JSON.
+            
+            JSON Structure:
+            {
+                "message": "A friendly response in Hebrew (describing what you built or asking clarifying questions). Refer to yourself as Chrobo AI.",
+                "files": [
+                    {
+                        "name": "manifest.json",
+                        "content": "code here..."
+                    },
+                    {
+                        "name": "background.js",
+                        "content": "code here..."
+                    }
+                    // ... other files
+                ]
+            }
+
+            RULES:
+            1. Always include a valid 'manifest.json' (Manifest V3) if starting a new project.
+            2. Use Hebrew for the "message" field.
+            3. Ensure the code is functional and modern.
+            4. If updating existing files, return the FULL content of the file.
+            5. Do not use 'alert()', use console.log or DOM manipulation.
+            6. You are using the "Gemini 3.0 Pro" capabilities (even if simulation).
+            `;
+
+            // Prepare History for context
+            const contents = [
+                { role: "user", parts: [{ text: systemPrompt }] },
+                ...chatHistory,
+                { role: "user", parts: [{ text: message }] }
+            ];
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: contents
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                const rawText = data.candidates[0].content.parts[0].text;
+                
+                // Clean response (sometimes models add markdown code blocks around JSON)
+                let cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                
+                let parsedResponse;
+                try {
+                    parsedResponse = JSON.parse(cleanJson);
+                } catch (e) {
+                    console.error("Failed to parse JSON", e);
+                    // Fallback if model didn't return JSON
+                    parsedResponse = {
+                        message: "אופס! הייתה שגיאה בעיבוד התשובה של Chrobo AI. נסה שוב בבקשה.",
+                        files: []
+                    };
+                }
+
+                // Update State
+                chatHistory.push({ role: "user", parts: [{ text: message }] });
+                chatHistory.push({ role: "model", parts: [{ text: rawText }] });
+
+                // Update UI
+                removeTypingIndicator();
+                addMessageToChat('model', parsedResponse.message);
+
+                if (parsedResponse.files && parsedResponse.files.length > 0) {
+                    updateFileManager(parsedResponse.files);
+                }
+
+            } catch (error) {
+                console.error(error);
+                removeTypingIndicator();
+                addMessageToChat('model', `שגיאה: ${error.message}`);
+            } finally {
+                document.getElementById('send-btn').disabled = false;
+            }
+        }
+
+        // --- UI Helper Functions ---
+
+        function addMessageToChat(role, text) {
+            const container = document.getElementById('chat-container');
+            const div = document.createElement('div');
+            div.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user' 
+                ? 'bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-[90%] text-sm shadow-md'
+                : 'bg-slate-700/50 border border-slate-600/50 text-slate-200 p-4 rounded-2xl rounded-tr-none max-w-[90%] text-sm shadow-sm';
+            
+            if (role === 'model') {
+                // Use Marked for markdown rendering in chat
+                bubble.innerHTML = `<div class="mb-1 text-blue-400 font-bold text-xs flex items-center gap-1"><i class="fa-brands fa-chrome"></i> Chrobo AI</div>` + marked.parse(text);
+            } else {
+                bubble.textContent = text;
+            }
+
+            div.appendChild(bubble);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('chat-container');
+            const div = document.createElement('div');
+            div.id = 'typing-indicator';
+            div.className = 'flex flex-col items-start';
+            div.innerHTML = `
+                <div class="bg-slate-700/50 p-3 rounded-2xl rounded-tr-none border border-slate-600/50">
+                    <div class="typing-indicator flex gap-1">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+        // --- File Manager & Editor Logic ---
+
+        function updateFileManager(newFiles) {
+            // Merge new files into current files
+            newFiles.forEach(file => {
+                currentFiles[file.name] = file.content;
+            });
+
+            renderTabs();
+            
+            // If files exist, enable download
+            if (Object.keys(currentFiles).length > 0) {
+                document.getElementById('download-btn').disabled = false;
+                document.getElementById('download-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('empty-state').style.display = 'none';
+                
+                // Select the first new file or manifest
+                const fileToSelect = newFiles.length > 0 ? newFiles[0].name : Object.keys(currentFiles)[0];
+                selectFile(fileToSelect);
+            }
+        }
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('file-tabs');
+            tabsContainer.innerHTML = '';
+
+            Object.keys(currentFiles).forEach(filename => {
+                const btn = document.createElement('button');
+                const isActive = activeFile === filename;
+                
+                // Determine icon based on extension
+                let icon = 'fa-file';
+                if (filename.endsWith('.html')) icon = 'fa-brands fa-html5 text-orange-500';
+                else if (filename.endsWith('.css')) icon = 'fa-brands fa-css3-alt text-blue-500';
+                else if (filename.endsWith('.js')) icon = 'fa-brands fa-js text-yellow-400';
+                else if (filename.endsWith('.json')) icon = 'fa-solid fa-gear text-slate-400';
+                else if (filename.endsWith('.png')) icon = 'fa-solid fa-image text-purple-400';
+
+                btn.className = `
+                    flex items-center gap-2 px-3 py-2 text-xs border-t-2 transition-colors whitespace-nowrap
+                    ${isActive 
+                        ? 'bg-[#1e1e1e] text-white border-blue-500' 
+                        : 'bg-[#2d2d2d] text-slate-400 border-transparent hover:bg-[#252526] hover:text-slate-200'}
+                `;
+                
+                btn.innerHTML = `<i class="${icon}"></i> ${filename}`;
+                btn.onclick = () => selectFile(filename);
+                
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function selectFile(filename) {
+            activeFile = filename;
+            renderTabs();
+            const editor = document.getElementById('code-display');
+            editor.value = currentFiles[filename];
+            // Make editable
+            editor.readOnly = false;
+            
+            // Simple listener to update state on manual edit
+            editor.oninput = (e) => {
+                currentFiles[activeFile] = e.target.value;
+            };
+        }
+
+        // --- Download Logic (JSZip) ---
+        function downloadZip() {
+            const zip = new JSZip();
+            
+            // Add all files to zip
+            Object.keys(currentFiles).forEach(filename => {
+                zip.file(filename, currentFiles[filename]);
+            });
+
+            // Generate and download
+            zip.generateAsync({type:"blob"})
+            .then(function(content) {
+                saveAs(content, "chrobo-ai-extension.zip");
+            });
+        }
+
+        // Handle Enter key in textarea
+        document.getElementById('user-prompt').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+    </script>
 </body>
 </html>
